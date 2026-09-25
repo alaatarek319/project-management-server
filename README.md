@@ -71,7 +71,6 @@ server/
 │   ├── utils/
 │   └── app.ts
 │
-├── tests/
 │
 ├── index.ts
 ├── drizzle.config.ts
@@ -87,7 +86,7 @@ server/
 ### 1. Clone the repository
 
 ```bash
-git clone <YOUR_GITHUB_REPOSITORY_URL>
+git clone <https://github.com/alaatarek319/project-management-server>
 cd server
 ```
 
@@ -269,10 +268,10 @@ Project update and delete operations are protected by an owner-only middleware.
 | ------ | ---------------------------- | ------------------- |
 | POST   | `/tasks/project/:project_id` | Create a task       |
 | GET    | `/tasks/project/:project_id` | Get project tasks   |
-| GET    | `/tasks/:id`                 | Get a specific task |
-| PATCH  | `/tasks/:id`                 | Update a task       |
+| GET    | `/tasks/:task_id`            | Get a specific task |
+| PATCH  | `/tasks/:task_id`            | Update a task       |
 | PATCH  | `/tasks/status/:task_id`     | Update task status  |
-| DELETE | `/tasks/:id`                 | Delete a task       |
+| DELETE | `/tasks/:task_id`            | Delete a task       |
 
 Task status updates are restricted to the user assigned to the task.
 
@@ -282,9 +281,13 @@ Task status updates are restricted to the user assigned to the task.
 
 The Members API provides endpoints for managing users and their membership within projects.
 
-See the Postman Collection for the complete list of member endpoints, request bodies, authentication requirements, and example responses.
+| Method | Endpoint                                 | Description                    | Authorization      |
+| ------ | ---------------------------------------- | ------------------------------ | ------------------ |
+| GET    | `/members/:project_id`                   | Get all members of a project   | Authenticated user |
+| POST   | `/members/:project_id`                   | Add a member to a project      | Project owner      |
+| DELETE | `/members/:project_id/:member_id`        | Remove a member from a project | Project owner      |
 
----
+See the Postman Collection for request bodies, authentication requirements, and example responses.
 
 # Database Design
 
@@ -333,7 +336,8 @@ Tasks include information such as:
 
 ### Members
 
-Stores project membership information and relationships between users and projects.
+* Project ID
+* User ID
 
 ### Refresh Tokens
 
@@ -360,6 +364,7 @@ Only the project owner can perform owner-specific operations such as:
 ### Task Authorization
 
 Only the user assigned to a task can update its status.
+Only the owner can edit or delete tasks.
 
 ---
 
