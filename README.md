@@ -518,7 +518,3 @@ npm test
 ```
 
 ---
-
-# License
-
-This project was developed as a university/project-management backend application.
