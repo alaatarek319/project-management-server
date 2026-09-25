@@ -23,6 +23,16 @@ The API follows a RESTful architecture and uses PostgreSQL as the database.
 
 ---
 
+## Live API
+
+The backend API is deployed on Vercel.
+
+**Base URL:**
+
+`https://project-management-server-orpin.vercel.app`
+
+---
+
 ## Technologies Used
 
 ### Backend
