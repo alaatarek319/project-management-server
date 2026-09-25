@@ -36,7 +36,7 @@ export const getUser = catchAsync(async (req: Request, res: Response) => {
 
 export const updateMe = catchAsync(async (req: Request, res: Response) => {
     const { username, email } = req.body;
-    const { id } = req.params;
+    const { id } = req.user;
 
     if (!id) {
         return res.status(400).json({
@@ -73,7 +73,7 @@ export const updateMe = catchAsync(async (req: Request, res: Response) => {
 
 export const updatePassword = catchAsync(async (req: Request, res: Response) => {
     const { currentPassword, newPassword, confirmPassword } = req.body;
-    const { id } = req.params;
+    const { id } = req.user;
 
     if (!id) {
       return res.status(400).json({
@@ -134,7 +134,7 @@ export const updatePassword = catchAsync(async (req: Request, res: Response) => 
 });
 
 export const deleteUser = catchAsync(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const { id } = req.user;
 
     if (!id) {
         return res.status(400).json({

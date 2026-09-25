@@ -7,15 +7,19 @@ import {
     deleteProject
 } from "../controllers/projectsController.js";
 import { verifyToken } from "../middleware/verifyToken.js";
+import { owner_only } from "../middleware/restrictTo.js";
 
 const router = express.Router();
 
 router.use(verifyToken);
-router.post("/", createProject);
-router.get("/", getProjects);
+router.route("/")
+  .post(createProject)
+  .get(getProjects);
 
-router.get("/:id", getProject);
-router.patch("/:id", updateProject);
-router.delete("/:id", deleteProject);
+router.get("/:project_id", getProject);
+
+router.route("/:project_id")
+  .patch(owner_only, updateProject)
+  .delete(owner_only, deleteProject);
 
 export default router;

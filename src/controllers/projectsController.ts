@@ -2,189 +2,189 @@ import catchAsync from "../utils/catchAsync.js";
 import { projects, tasks } from "../db/schema.js";
 import { db } from "../db/index.js";
 import { Request, Response } from "express";
-import { eq, or, exists, and } from "drizzle-orm";
+import { eq, or, exists, and, ilike, asc, desc, sql } from "drizzle-orm";
+import { projectsQuerySchema } from "../validators/querySchemas.js";
 
 export const createProject = catchAsync(async (req: Request, res: Response) => {
-    const { name, description, owner_id} = req.body;
+  const { name, description } = req.body;
+  const owner_id = req.user.id;
 
-    if (!name || !description || !owner_id) {
-        return res.status(400).json({
-        status: "fail",
-        message: "Please provide all the required fields",
-        });
-    }
-
-    const newProject = await db.insert(projects).values({
-        name,
-        description,
-        owner_id,
+  if (!name || !description || !owner_id) {
+    return res.status(400).json({
+      status: "fail",
+      message: "Please provide all the required fields",
     });
+  }
 
-    res.status(201).json({
-        status: "success",
-        message: "Project created successfully",
-        data: newProject,
-    });
+  const newProject = await db.insert(projects).values({
+    name,
+    description,
+    owner_id,
+  });
+
+  res.status(201).json({
+    status: "success",
+    message: "Project created successfully",
+    data: newProject,
+  });
 });
 
 export const getProjects = catchAsync(async (req: Request, res: Response) => {
-    const { id } = req.user;
+  const { id } = req.user;
 
-    if (!id) {
-        return res.status(400).json({
-        status: "fail",
-        message: "Please provide the user ID",
-        });
-    }
+  if (!id) {
+    return res.status(400).json({
+      status: "fail",
+      message: "Please provide the user ID",
+    });
+  }
 
+  // Validate & parse query params
+  const parsed = projectsQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    return res.status(400).json({
+      status: "fail",
+      message: "Invalid query parameters",
+      errors: parsed.error.flatten().fieldErrors,
+    });
+  }
+
+  const { search, sortBy, order, page, limit } = parsed.data;
+  const pageNum  = page  ? Number(page)  : 1;
+  const limitNum = limit ? Number(limit) : 10;
+  const offset   = (pageNum - 1) * limitNum;
+
+  // Build ownership / membership filter
+  const accessFilter = or(
+    eq(projects.owner_id, Number(id)),
+    exists(
+      db
+        .select()
+        .from(tasks)
+        .where(
+          and(
+            eq(tasks.project_id, projects.id),
+            eq(tasks.assigned_to_id, Number(id))
+          )
+        )
+    )
+  );
+
+  // Optional search filter
+  const whereClause = search
+    ? and(accessFilter, ilike(projects.name, `%${search}%`))
+    : accessFilter;
+
+  // Sort column
+  const sortColumn = sortBy === "name" ? projects.name : projects.id;
+  const orderExpr  = order === "desc" ? desc(sortColumn) : asc(sortColumn);
+
+  // Count total matching rows (for pagination metadata)
+  const [{ total }] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(projects)
+    .where(whereClause);
+
+  // Fetch page
   const allProjects = await db
     .select()
     .from(projects)
-    .where(
-      or(
-        eq(projects.owner_id, Number(id)),
-        exists(
-          db
-            .select()
-            .from(tasks)
-            .where(
-              and(
-                eq(tasks.project_id, projects.id),
-                eq(tasks.assigned_to_id, Number(id))
-              )
-            )
-          )
-        )
-      )
+    .where(whereClause)
+    .orderBy(orderExpr)
+    .limit(limitNum)
+    .offset(offset);
 
-    if (!allProjects) {
-      return res.status(404).json({
-        status: "fail",
-        message: "Projects not found",
-      });
-    }
-
-    res.status(200).json({
-        status: "success",
-        message: "Projects fetched successfully",
-        data: allProjects,
-    });
+  res.status(200).json({
+    status: "success",
+    message: "Projects fetched successfully",
+    pagination: {
+      total,
+      page:       pageNum,
+      limit:      limitNum,
+      totalPages: Math.ceil(total / limitNum),
+    },
+    data: allProjects,
+  });
 });
 
 export const getProject = catchAsync(async (req: Request, res: Response) => {
-    const { project_id } = req.params;
+  const { project_id } = req.params;
 
-    if (!project_id) {
-        return res.status(400).json({
-        status: "fail",
-        message: "Please provide the project ID",
-        });
-    }
-
-    const project = await db.select().from(projects).where(eq(projects.id, Number(project_id)));
-
-    if (!project) {
-        return res.status(404).json({
-        status: "fail",
-        message: "Project not found",
-        });
-    }
-
-    res.status(200).json({
-        status: "success",
-        message: "Project fetched successfully",
-        data: project,
+  if (!project_id) {
+    return res.status(400).json({
+      status: "fail",
+      message: "Please provide the project ID",
     });
+  }
+
+  const project = await db
+    .select()
+    .from(projects)
+    .where(eq(projects.id, Number(project_id)));
+
+  if (!project) {
+    return res.status(404).json({
+      status: "fail",
+      message: "Project not found",
+    });
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: "Project fetched successfully",
+    data: project,
+  });
 });
 
 export const updateProject = catchAsync(async (req: Request, res: Response) => {
-    const { project_id } = req.params;
-    const { name, description} = req.body;
-    const user_id = req.user.id;
+  const { project_id } = req.params;
+  const { name, description } = req.body;
 
-    if (!project_id) {
-        return res.status(400).json({
-        status: "fail",
-        message: "Please provide the project ID",
-        });
-    }
+  const project = await db.query.projects.findFirst({
+    where: (projects, { eq }) => eq(projects.id, Number(project_id)),
+  });
 
-    const project = await db.query.projects.findFirst({
-        where: (projects, { eq }) =>
-            eq(projects.id, Number(project_id)),
-        });
-
-    if (!project) {
-    return res.status(404).json({
-        status: "fail",
-        message: "Project not found",
-    });
-    }
-
-    if (project.owner_id !== Number(user_id)) {
-    return res.status(403).json({
-        status: "fail",
-        message: "You are not authorized to update this project",
-    });
-    }
-
-    const updatedProject = await db
+  const updatedProject = await db
     .update(projects)
-    .set({
-        name,
-        description,
-    })
+    .set({ name, description })
     .where(eq(projects.id, Number(project_id)))
     .returning();
 
-    res.status(200).json({
-        status: "success",
-        message: "Project updated successfully",
-        data: updatedProject,
-    });
+  res.status(200).json({
+    status: "success",
+    message: "Project updated successfully",
+    data: updatedProject,
+  });
 });
 
 export const deleteProject = catchAsync(async (req: Request, res: Response) => {
-    const { project_id } = req.params;
-    const user_id = req.user.id;
+  const { project_id } = req.params;
+  const user_id = req.user.id;
 
-    if (!project_id) {
-        return res.status(400).json({
-        status: "fail",
-        message: "Please provide the project ID",
-        });
-    }
+  const project = await db.query.projects.findFirst({
+    where: (projects, { eq }) => eq(projects.id, Number(project_id)),
+  });
 
-    const project = await db.query.projects.findFirst({
-        where: (projects, { eq }) =>
-            eq(projects.id, Number(project_id)),
-        });
-
-    if (!project) {
+  if (!project) {
     return res.status(404).json({
-        status: "fail",
-        message: "Project not found",
+      status: "fail",
+      message: "Project not found",
     });
-    }
+  }
 
-    if (project.owner_id !== Number(user_id)) {
-    return res.status(403).json({
-        status: "fail",
-        message: "You are not authorized to delete this project",
+  const deletedProject = await db
+    .delete(projects)
+    .where(eq(projects.id, Number(project_id)));
+
+  if (!deletedProject) {
+    return res.status(404).json({
+      status: "fail",
+      message: "Project not found",
     });
-    }
+  }
 
-    const deletedProject = await db.delete(projects).where(eq(projects.id, Number(project_id)));
-
-    if (!deletedProject) {
-        return res.status(404).json({
-        status: "fail",
-        message: "Project not found",
-        });
-    }
-
-    res.status(200).json({
-        status: "success",
-        message: "Project deleted successfully",
-    });
+  res.status(200).json({
+    status: "success",
+    message: "Project deleted successfully",
+  });
 });

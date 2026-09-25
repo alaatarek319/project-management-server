@@ -1,22 +1,32 @@
 import catchAsync from "../utils/catchAsync.js";
 import { db } from "../db/index.js";
-import { members } from "../db/schema.js";
+import { members, projects } from "../db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { Request, Response } from "express";
 
 export const addMember = catchAsync(async (req: Request, res: Response) => {
-    const { project_id, member_id } = req.body;
-
-    if (!project_id || !member_id) {
+    const { member_id } = req.body;
+    const { project_id } = req.params;
+    
+    if (!member_id) {
         return res.status(400).json({
             status: "fail",
             message: "Please provide all the required fields",
         });
     }
 
+    // check if the member is already a member of the project
+    const existingMember = await db.select().from(members).where(and(eq(members.project_id, Number(project_id)), eq(members.member_id, Number(member_id))));
+    if (existingMember.length !== 0) {
+        return res.status(400).json({
+            status: "fail",
+            message: "Member is already a member of this project",
+        });
+    }
+
     const newMember = await db.insert(members).values({
-        project_id,
-        member_id,
+        project_id: Number(project_id),
+        member_id: Number(member_id),
     });
 
     res.status(201).json({
@@ -55,13 +65,22 @@ export const getMembers = catchAsync(async (req: Request, res: Response) => {
 export const removeMember = catchAsync(async (req: Request, res: Response) => {
     const { project_id, member_id } = req.params;
 
-    if (!project_id || !member_id) {
+    if (!member_id) {
         return res.status(400).json({
             status: "fail",
             message: "Please provide all the required fields",
         });
     }
 
+    // check if the member is already a member of the project
+    const existingMember = await db.select().from(members).where(and(eq(members.project_id, Number(project_id)), eq(members.member_id, Number(member_id))));
+    if (!existingMember) {
+        return res.status(404).json({
+            status: "fail",
+            message: "Member is not a member of this project",
+        });
+    }
+    
     const deletedMember = await db.delete(members).where(and(eq(members.project_id, Number(project_id)), eq(members.member_id, Number(member_id))));
 
     if (!deletedMember) {

@@ -1,14 +1,5 @@
-import type { Request, Response, NextFunction } from "express";
+import morgan from "morgan";
 
-
-const requestLogger = (req: Request, res: Response, next: NextFunction) => {
-    console.log(`\n🔵 [${req.method}] ${req.url}`);
-    
-    console.log("Headers 'Content-Type':", req.headers['content-type']);
-    
-    console.log("Body:", req.body);
-
-    next();
-};
+const requestLogger = morgan(":method :url :status :response-time ms");
 
 export default requestLogger;

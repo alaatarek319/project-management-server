@@ -92,10 +92,10 @@ export const signup = catchAsync(async (req, res, next) => {
 
 // --- 2. LOGIN ---
 export const login = catchAsync(async (req, res, next) => {
-  // Validate input (identifier can be email or username)
+  // Validate input email 
   const { email, password } = loginSchema.parse(req.body);
 
-  // Find user by email OR username
+  // Find user by email
   const user = await db.query.users.findFirst({
     where: (user, { eq }) => eq(user.email, email),
     columns: {
@@ -173,9 +173,7 @@ export const getMe = catchAsync(async (req, res, next) => {
 
   const foundUser = await db.query.users.findFirst({
     where: (user, { eq }) => eq(user.id, userId),
-
     columns: {
-      id: true,
       username: true,
       email: true,
     },
@@ -366,7 +364,6 @@ export const forgotPassword = catchAsync(async (req, res, next) => {
       message: "Token sent to email!",
     });
   } catch (error) {
-    console.error("EMAIL ERROR:", error);
     // Email failed → remove reset token
     await db
       .update(users)

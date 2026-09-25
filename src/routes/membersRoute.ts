@@ -5,13 +5,14 @@ import {
     removeMember
 } from "../controllers/membersControllers.js";
 import { verifyToken } from "../middleware/verifyToken.js";
+import { owner_only } from "../middleware/restrictTo.js";
 
 const router = express.Router();
 
 router.use(verifyToken);
 
-router.post("/", addMember);
 router.get("/:project_id", getMembers);
-router.delete("/:project_id/:id", removeMember);
+router.post("/:project_id", owner_only, addMember);
+router.delete("/:project_id/:member_id", owner_only, removeMember);
 
 export default router;

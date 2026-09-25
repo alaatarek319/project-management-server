@@ -32,8 +32,7 @@ export const verifyToken = (
     // 4. Make sure decoded payload has the expected structure
     if (
       typeof decoded === "string" ||
-      typeof decoded.id !== "string" ||
-      typeof decoded.role !== "string"
+      typeof decoded.id !== "number"
     ) {
       return next(new AppError("Invalid token payload", 401));
     }
@@ -41,7 +40,6 @@ export const verifyToken = (
     // 5. Attach user information to request
     req.user = {
       id: decoded.id,
-      role: decoded.role,
     };
 
     // 6. Continue

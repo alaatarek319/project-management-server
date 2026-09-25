@@ -90,7 +90,7 @@ async function main() {
         status: "Done",
         priority: "High",
         project_id: project.id,
-        member_id: user1.id,
+        assigned_to_id: user1.id,
       },
       {
         title: "Create Database",
@@ -98,7 +98,7 @@ async function main() {
         status: "In progress",
         priority: "High",
         project_id: project.id,
-        member_id: user2.id,
+        assigned_to_id: user2.id,
       },
       {
         title: "Implement Authentication",
@@ -107,10 +107,11 @@ async function main() {
         status: "To Do",
         priority: "Medium",
         project_id: project.id,
-        member_id: user3.id,
+        assigned_to_id: user3.id,
       },
     ])
     .onConflictDoNothing();
+
 
   console.log("✅ Tasks ready!");
 

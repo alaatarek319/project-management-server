@@ -1,10 +1,7 @@
 import jwt from "jsonwebtoken";
 import { db } from "../../db/index.js";
 import { refreshToken as refreshTokenTable } from "../../db/schema.js";
-/**
- * Generates both an Access Token (15m) and Refresh Token (30d),
- * and persists the Refresh Token into the PostgreSQL database using Drizzle ORM.
- */
+
 export const generateAccessAndRefreshTokens = async (userId: number) => {
     const payload = {
         id: userId,

@@ -1,4 +1,5 @@
 import express from "express";
+import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import cors from "cors";
@@ -30,7 +31,7 @@ if (process.env.NODE_ENV === "development") {
 app.get("/", (req, res) => {
     res.json({
         status: "success",
-        message: "Makina API is running",
+        message: "Project Management API is running",
     });
 });
 // 3. API Routes
